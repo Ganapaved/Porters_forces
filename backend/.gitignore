@@ -1,0 +1,4 @@
+.env
+__pycache__
+sec-edgar-filings
+chroma_store
