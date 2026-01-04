@@ -2,12 +2,12 @@
 
 ## What Changed?
 
-### 🎨 New Frontend (frontend.html)
+### 🎨 New Frontend (React + Vite)
 
 - **Beautiful, responsive web interface** instead of raw JSON
 - Enter stock ticker and email, get human-readable analysis
 - Real-time loading feedback and card-based results layout
-- Works completely in browser (no build process needed)
+- Built with React and Vite for modern, fast development
 
 ### ⚡ Token Optimization (50% reduction)
 
@@ -27,14 +27,31 @@ uvicorn server:app --reload
 # Server runs on http://127.0.0.1:8000
 ```
 
-### Open the Frontend
+### Set Up and Run the Frontend
 
-1. Open `frontend.html` in your web browser (Chrome, Firefox, Safari, Edge)
-2. Or open directly via a file URL, for example: `file:///path/to/Porters_forces/frontend.html`
-3. Enter:
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+   The frontend will be available at `http://localhost:5173`
+
+4. Open your browser and navigate to `http://localhost:5173`
+
+5. Enter:
    - **Stock Ticker**: AAPL, NVDA, MSFT, etc.
    - **Email**: Any valid email (required by SEC API)
-4. Click "Analyze" and wait 2-3 minutes
+
+6. Click "Analyze" and wait 2-3 minutes
 
 ### What You'll See
 
@@ -51,7 +68,11 @@ Analysis for each of the 3 Porter Forces:
 
 ```
 Porters_forces/
-├── frontend.html              ← Open this in your browser
+├── frontend/                  ← React frontend
+│   ├── src/                   ← React components and logic
+│   ├── index.html             ← HTML entry point
+│   ├── package.json           ← Frontend dependencies
+│   └── vite.config.js         ← Vite configuration
 ├── .github/
 │   └── copilot-instructions.md ← AI agent docs
 └── backend/
@@ -106,4 +127,4 @@ Get a free Gemini API key: https://ai.google.dev/
 
 ---
 
-**Next Steps**: Open `frontend.html` and try analyzing your favorite company!
+**Next Steps**: Run `npm install` and `npm run dev` in the `frontend/` directory, then analyze your favorite company!
