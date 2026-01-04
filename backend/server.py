@@ -22,8 +22,9 @@ app.add_middleware(
 
 SEC_COMPANY_URL = "https://www.sec.gov/files/company_tickers.json"
 
+EMAIL = os.getenv('email')
 HEADERS = {
-    "User-Agent": f"PorterAI {os.getenv('email')}"
+    "User-Agent": f"PorterAI {EMAIL or 'missing-email@example.com'}"
 }
 
 
@@ -55,13 +56,15 @@ def list_companies(limit: int = 50):
 
 @app.get("/analyze")
 def analyze(
-    ticker: str = Query(..., description="Ticker symbol (AAPL, MSFT)"),
-    email: str = Query(..., description="Email required by SEC")
+    ticker: str = Query(..., description="Ticker symbol (AAPL, MSFT)")
 ):
     ticker = ticker.upper()
 
+    if not EMAIL:
+        return {"error": "Email not set in .env (key: email)"}
+
     try:
-        result = analyze_force(ticker, email)
+        result = analyze_force(ticker)
         return {
             "ticker": ticker,
             "analysis": result
