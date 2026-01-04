@@ -30,7 +30,7 @@ uvicorn server:app --reload
 ### Open the Frontend
 
 1. Open `frontend.html` in your web browser (Chrome, Firefox, Safari, Edge)
-2. Or open directly: `file:///c:/Users/Admin/OneDrive/Desktop/POME EL/Project/Porters_forces/frontend.html`
+2. Or open directly via a file URL, for example: `file:///path/to/Porters_forces/frontend.html`
 3. Enter:
    - **Stock Ticker**: AAPL, NVDA, MSFT, etc.
    - **Email**: Any valid email (required by SEC API)
