@@ -1,0 +1,40 @@
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+.idea/
+.github/
+
+# Backend (Python / Flask)
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+backend/.env
+backend/.env.*
+backend/.venv/
+backend/venv/
+backend/env/
+backend/build/
+backend/dist/
+backend/*.egg-info/
+backend/*.log
+backend/*.sqlite3
+backend/chroma_store/
+backend/sec-edgar-filings/
+
+# Frontend (Vite/Node)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.parcel-cache/
+frontend/.env
+frontend/.env.*
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/pnpm-debug.log*
+
+# Testing & coverage
+coverage/
+*.coverage

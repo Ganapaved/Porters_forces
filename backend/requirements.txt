@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sec-edgar-downloader
+google-generativeai
+langchain
+langchain-text-splitters
+langchain-community
+sentence-transformers
+chromadb
+python-dotenv
+matplotlib
+plotly
+requests
+pydantic

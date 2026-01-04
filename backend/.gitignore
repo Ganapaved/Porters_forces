@@ -1,4 +1,26 @@
+# Environments and caches
 .env
-__pycache__
-sec-edgar-filings
-chroma_store
+.env.*
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Build and packaging artifacts
+build/
+dist/
+*.egg-info/
+
+# Local data and stores
+sec-edgar-filings/
+chroma_store/
+*.sqlite3
+*.log
+
+# Editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

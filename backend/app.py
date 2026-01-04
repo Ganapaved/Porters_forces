@@ -19,7 +19,34 @@ import json
 
 load_dotenv()
 genai.configure(api_key=os.getenv('gemini_api_key'))
-model = genai.GenerativeModel("gemini-2.5-flash")
+
+# Preferred model order (free-tier friendly first)
+MODEL_CANDIDATES = [
+    "gemini-2.5-flash-lite",
+    "gemini-3-flash",
+    "gemini-2.5-flash",
+    "gemma-3-1b",
+    "gemma-3-2b",
+    "gemma-3-4b",
+    "gemma-3-12b",
+    "gemma-3-27b",
+]
+
+def generate_with_fallback(prompt: str):
+    """
+    Try candidate models in order until one succeeds.
+    Returns generate_content response.
+    """
+    last_error = None
+    for model_name in MODEL_CANDIDATES:
+        try:
+            model = genai.GenerativeModel(model_name)
+            return model.generate_content(prompt)
+        except Exception as exc:  # graceful fallback on quota/availability errors
+            last_error = exc
+            print(f"[WARN] Model {model_name} failed: {exc}")
+            continue
+    raise last_error if last_error else RuntimeError("No Gemini model succeeded")
 
 # -------------------------------
 # 5. LOCAL EMBEDDINGS
@@ -51,8 +78,12 @@ def extract_json(text):
         raise ValueError("No JSON object found")
     return json.loads(match.group())
 
-def analyze_force(ticker,email):
+def analyze_force(ticker):
     base_path = f"sec-edgar-filings/{ticker}/10-K"
+
+    email = os.getenv("email")
+    if not email:
+        raise ValueError("Email not set in .env (key: email)")
 
     if not os.path.exists(base_path):
         print("[INFO] 10-K not found. Downloading...")
@@ -136,6 +167,28 @@ def analyze_force(ticker,email):
         "marketing",
         "competition",
         "operating expenses"
+    ],
+    "Threat of Substitutes": [
+        "alternative products",
+        "product differentiation",
+        "switching costs",
+        "substitute threats",
+        "customer preferences",
+        "open source",
+        "replacement technology",
+        "commoditization",
+        "adjacent markets"
+    ],
+    "Threat of New Entrants": [
+        "barriers to entry",
+        "capital requirements",
+        "market access",
+        "brand loyalty",
+        "economies of scale",
+        "regulation",
+        "patents",
+        "switching costs",
+        "distribution"
     ]
     }
 
@@ -150,6 +203,58 @@ def analyze_force(ticker,email):
             continue
         context = "\n".join(d.page_content for d in docs)
 
+        # Optimized: Combined single prompt to reduce token usage (was 2 API calls)
+        combined_prompt = f"""You are a financial analyst. Analyze this Porter Force concisely.
+
+    Force: {force}
+
+    Context from 10-K:
+    {context}
+
+    Output ONLY these sections (be concise):
+
+    EXPLANATION
+    Brief explanation (2-3 sentences). If substitutes or entrants are not explicit, infer plausible substitutes/entrants from context signals (products, tech, channels, regions).
+
+    KEY_NUMBERS
+    List numerical values found. If none, write "None". Prefer: revenue/margin trends, segment/geo mix, R&D %, capex, customer/supplier concentration, unit volumes.
+
+    ORGANIZATION_VIEW
+    Operational implications (2 bullets). Mention switching costs, differentiation, IP/regulatory barriers, distribution strength, brand loyalty if present or implied.
+
+    INVESTOR_VIEW
+    Risk and return implications (2 bullets). Note margin pressure, moat durability, entry barriers, and substitution risk.
+
+    METRICS_JSON
+    {{"force": "{force}", "metrics": [{{"name": "...", "value": number, "unit": "...", "year": "...", "description": "..."}}]}}
+    If no numbers: {{"force": "{force}", "metrics": []}}
+    """
+
+        # Single API call instead of two
+        response = generate_with_fallback(combined_prompt)
+        text_output = response.text
+        
+        # Extract JSON
+        try:
+            numeric_data = extract_json(text_output)
+        except:
+            numeric_data = {"force": force, "metrics": []}
+
+        final_report[force] = {
+            'text_analysis': text_output,
+            "numerical_analysis": numeric_data
+        }
+
+    print(final_report)
+    return final_report
+
+
+# LEGACY CODE BELOW - KEPT FOR REFERENCE BUT NOT USED
+def _old_two_prompt_method():
+        """
+        This old method used 2 API calls per force (6 total for 3 forces).
+        New combined_prompt reduces this to 1 call per force (3 total).
+        """
         prompt = f"""
     You are a financial analyst.
 
@@ -196,91 +301,3 @@ def analyze_force(ticker,email):
     • Margin impact
 
     """
-        text_response = model.generate_content(prompt)
-        text_output = text_response.text
-
-        json_prompt = f"""
-    You are a financial analyst.
-
-    Analyze the Porter Force:
-    {force}
-
-    Context from company's 10-K:
-    {context}
-
-    STRICT RULES:
-    - Output ONLY raw JSON
-    1. Identify ALL numerical values (revenues, percentages, costs).
-    2. If numbers relate indirectly, explain the relationship.
-    3. Use numbers ONLY if explicitly present in context.
-    4. Output ONLY valid JSON.
-
-    JSON FORMAT:
-    {{
-    "force": "{force}",
-    "metrics": [
-        {{
-        "name": "Metric Name",
-        "value": 0,
-        "unit": "%",
-        "year": "YYYY",
-        "description": "What this metric indicates"
-        }}
-    ]
-    }}
-
-    If no numerical data exists, return:
-    {{
-    "force": "{force}",
-    "metrics": []
-    }}
-    """
-
-        json_response = model.generate_content(json_prompt)
-        numeric_data = extract_json(json_response.text)
-
-        final_report[force]={
-            'text_analysis':text_output,
-            "numerical_analysis" : numeric_data
-        }
-    print(final_report)
-    return final_report
-
-
-# # ---------------------------------
-# # VISUALIZATION
-# # ---------------------------------
-# for result in all_results:
-#     force = result["force"]
-#     metrics = result["metrics"]
-
-#     # Only numeric values
-#     numeric_metrics = [
-#         m for m in metrics if isinstance(m["value"], (int, float))
-#     ]
-
-#     if not numeric_metrics:
-#         print(f"[INFO] No numeric data to plot for {force}")
-#         continue
-
-#     names = [m["name"] for m in numeric_metrics]
-#     values = [m["value"] for m in numeric_metrics]
-
-#     # Matplotlib Bar Chart
-#     plt.figure(figsize=(8, 5))
-#     plt.bar(names, values)
-#     plt.title(f"{force} – Numerical Evidence")
-#     plt.ylabel("Value")
-#     plt.xticks(rotation=25)
-#     plt.tight_layout()
-#     plt.show()
-
-#     # Plotly Interactive Chart
-#     fig = px.bar(
-#         x=names,
-#         y=values,
-#         title=f"{force} – Interactive Evidence"
-#     )
-#     fig.show()
-
-
