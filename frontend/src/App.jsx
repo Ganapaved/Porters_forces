@@ -7,6 +7,8 @@ import PentagonRadar, { FORCE_NAME_MAP, FORCES } from './components/PentagonRada
 import ForceChapter, { FORCE_ORDER } from './components/ForceChapter'
 import OrbitNavigator from './components/OrbitNavigator'
 import Synthesis from './components/Synthesis'
+import StockPerformance from './components/StockPerformance'
+import ContactUs from './components/ContactUs'
 
 const API_BASE = 'http://127.0.0.1:8000'
 
@@ -191,6 +193,16 @@ export default function App() {
         </button>
       </header>
 
+      {/* ============ NAVIGATION BAR ============ */}
+      <nav className="main-nav">
+        <a href="#home" className="nav-link" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
+          Home
+        </a>
+        <a href="#forces" className="nav-link">Porter's Five Forces</a>
+        <a href="#stock" className="nav-link">Stock Performance</a>
+        <a href="#contact" className="nav-link">Contact Us</a>
+      </nav>
+
       {/* ============ MAIN CONTENT ============ */}
       <main className="main-content">
         
@@ -220,7 +232,7 @@ export default function App() {
         )}
 
         {/* ============ HERO: COMMAND VIEW ============ */}
-        <section className="hero" ref={heroRef}>
+        <section className="hero" id="home" ref={heroRef}>
           <div className="hero-content">
             <div className="hero-label">Competitive Analysis</div>
             <h1 className="hero-title">
@@ -291,7 +303,7 @@ export default function App() {
 
         {/* ============ FORCE CHAPTERS ============ */}
         {results && (
-          <div className="chapters">
+          <div className="chapters" id="forces">
             {FORCE_ORDER.map((forceId, index) => {
               const forceName = FORCE_ID_TO_NAME[forceId]
               const forceData = results.analysis?.[forceName]
@@ -322,6 +334,14 @@ export default function App() {
             analysisData={results.analysis}
           />
         )}
+
+        {/* ============ STOCK PERFORMANCE ============ */}
+        {results && (
+          <StockPerformance ticker={results.ticker} companyName={companyName} />
+        )}
+
+        {/* ============ CONTACT US ============ */}
+        <ContactUs />
 
         {/* ============ EMPTY STATE ============ */}
         {!results && !loading && !error && (
