@@ -395,14 +395,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .pentagon-node circle {
-  fill: var(--bg-surface);
-  stroke-width: 3;
-  transition: var(--transition-medium);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.pentagon-node:hover circle {
-  filter: drop-shadow(0 0 10px currentColor);
-  transform: scale(1.2);
+.pentagon-node:hover {
+  filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.3));
 }
 
 .pentagon-node text {
@@ -410,8 +407,21 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 12px;
   font-weight: 600;
   text-anchor: middle;
+  transition: all 0.3s ease;
 }
 
+/* Animated gradient pulse on hover */
+@keyframes gradientPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes rotateSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Enhanced node colors with gradient effects */
 .pentagon-node.rivalry circle { stroke: var(--force-rivalry); }
 .pentagon-node.buyers circle { stroke: var(--force-buyers); }
 .pentagon-node.suppliers circle { stroke: var(--force-suppliers); }
