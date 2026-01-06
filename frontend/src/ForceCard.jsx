@@ -31,10 +31,21 @@ export default function ForceCard({ force, data }) {
 
   const sections = textAnalysis.split('\n\n').filter(s => s.trim())
 
+  // Clean content: remove asterisks, bullet points, and markdown symbols
+  const cleanContent = (text) => {
+    return text
+      .replace(/^\s*[\*\-•]\s*/gm, '') // Remove bullet points at start of lines
+      .replace(/\*\*/g, '')            // Remove bold markdown **
+      .replace(/\*/g, '')              // Remove remaining asterisks
+      .replace(/^#+\s*/gm, '')         // Remove markdown headers
+      .replace(/\n{3,}/g, '\n\n')      // Collapse multiple newlines
+      .trim()
+  }
+
   const parseSection = (text) => {
     const lines = text.trim().split('\n')
     const firstLine = lines[0]
-    const content = lines.slice(1).join('\n').trim()
+    const content = cleanContent(lines.slice(1).join('\n'))
     return { firstLine, content }
   }
 

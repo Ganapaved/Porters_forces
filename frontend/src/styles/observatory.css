@@ -75,10 +75,157 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
+  position: relative;
 }
 
 #root {
   width: 100%;
+  position: relative;
+  z-index: 10;
+}
+
+/* ============================================
+   BACKGROUND EFFECTS
+   ============================================ */
+
+/* Animated Gradient Background */
+.bg-gradient-animated {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  background: linear-gradient(
+    135deg,
+    #0a0e17 0%,
+    #0d1220 25%,
+    #121829 50%,
+    #0f1422 75%,
+    #0a0e17 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 20s ease infinite;
+  opacity: 1;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Interactive Particle Effects */
+.bg-particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.6;
+}
+
+/* Animated SVG Shapes Background */
+.bg-svg-shapes {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.8;
+}
+
+/* Parallax Layers */
+.parallax-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}
+
+.parallax-layer-1 {
+  z-index: 3;
+  background: radial-gradient(
+    circle at 20% 30%, 
+    rgba(244, 63, 94, 0.03) 0%, 
+    transparent 50%
+  );
+  animation: parallaxFloat1 30s ease-in-out infinite;
+}
+
+@keyframes parallaxFloat1 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(20px, -15px); }
+}
+
+.parallax-layer-2 {
+  z-index: 4;
+  background: radial-gradient(
+    circle at 80% 70%, 
+    rgba(59, 130, 246, 0.04) 0%, 
+    transparent 50%
+  );
+  animation: parallaxFloat2 35s ease-in-out infinite;
+}
+
+@keyframes parallaxFloat2 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-25px, 20px); }
+}
+
+/* Scrolling Parallax Effect */
+.parallax-scroll {
+  will-change: transform;
+  transition: transform 0.1s ease-out;
+}
+
+/* Ambient Glow Effect */
+.ambient-glow {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 600px;
+  height: 600px;
+  margin: -300px 0 0 -300px;
+  background: radial-gradient(
+    circle,
+    rgba(251, 191, 36, 0.08) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 5;
+  animation: glowPulse 8s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
+}
+
+/* Smooth scroll container */
+.app {
+  position: relative;
+  z-index: 10;
+}
+
+/* Add depth to content sections */
+.hero-section,
+.force-chapter,
+.synthesis-section {
+  position: relative;
+  z-index: 15;
+  background: rgba(10, 14, 23, 0.6);
+  backdrop-filter: blur(10px);
 }
 
 /* --- Typography --- */

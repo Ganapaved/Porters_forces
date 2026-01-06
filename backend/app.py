@@ -218,30 +218,30 @@ def analyze_force(ticker):
         context = "\n".join(d.page_content for d in docs)
 
         # Optimized: Combined single prompt to reduce token usage (was 2 API calls)
-        combined_prompt = f"""You are a financial analyst. Analyze this Porter Force concisely.
+        combined_prompt = f"""You are a senior financial analyst writing for a professional audience. Analyze this Porter Force with depth and precision.
 
     Force: {force}
 
     Context from 10-K:
     {context}
 
-    Output ONLY these sections (be concise):
+    Output ONLY these sections. Write in flowing prose WITHOUT bullet points, asterisks, or markdown symbols:
 
     EXPLANATION
-    Brief explanation (2-3 sentences). If substitutes or entrants are not explicit, infer plausible substitutes/entrants from context signals (products, tech, channels, regions).
+    Provide a comprehensive explanation (4-5 sentences). Describe how this force manifests in the company's competitive environment. If substitutes or entrants are not explicit, infer plausible alternatives from context signals such as product categories, emerging technologies, distribution channels, or geographic expansion patterns.
 
     KEY_NUMBERS
-    List numerical values found. If none, write "None". Prefer: revenue/margin trends, segment/geo mix, R&D %, capex, customer/supplier concentration, unit volumes.
+    Extract and list specific numerical values found in the context. Include revenue figures, margin percentages, segment breakdowns, geographic mix, R&D spending ratios, capital expenditure, customer or supplier concentration metrics, and unit volumes. If no explicit numbers exist, write "None available in filing."
 
     ORGANIZATION_VIEW
-    Operational implications (2 bullets). Mention switching costs, differentiation, IP/regulatory barriers, distribution strength, brand loyalty if present or implied.
+    Focus exclusively on INTERNAL OPERATIONS and STRATEGIC EXECUTION. Discuss how the company's management team handles this force through day-to-day operations. Address topics like: supply chain resilience, manufacturing flexibility, talent retention, R&D pipeline management, cost structure optimization, operational efficiency initiatives, partnership strategies, and internal capability building. Write 3-4 detailed sentences that reveal operational realities a CEO or COO would recognize.
 
     INVESTOR_VIEW
-    Risk and return implications (2 bullets). Note margin pressure, moat durability, entry barriers, and substitution risk.
+    Focus exclusively on FINANCIAL PERFORMANCE and INVESTMENT THESIS. Discuss what this force means for shareholders and capital allocation. Address topics like: revenue predictability, margin trajectory, cash flow sustainability, competitive moat strength, market share dynamics, valuation multiples, dividend capacity, and long-term growth runway. Write 3-4 detailed sentences that reveal investment considerations a portfolio manager would evaluate.
 
     METRICS_JSON
     {{"force": "{force}", "metrics": [{{"name": "...", "value": number, "unit": "...", "year": "...", "description": "..."}}]}}
-    If no numbers: {{"force": "{force}", "metrics": []}}
+    If no numbers found: {{"force": "{force}", "metrics": []}}
     """
 
         # Single API call instead of two

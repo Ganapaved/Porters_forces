@@ -9,8 +9,9 @@ import OrbitNavigator from './components/OrbitNavigator'
 import Synthesis from './components/Synthesis'
 import StockPerformance from './components/StockPerformance'
 import ContactUs from './components/ContactUs'
+import BackgroundEffects from './components/BackgroundEffects'
 
-const API_BASE = 'http://127.0.0.1:8000'
+const API_BASE = 'http://127.0.0.1:8001'
 
 // Reverse mapping: forceId -> backend force name
 const FORCE_ID_TO_NAME = Object.fromEntries(
@@ -91,6 +92,28 @@ export default function App() {
     return () => observers.forEach(obs => obs.disconnect())
   }, [results])
 
+  // Parallax scrolling effect
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrolled = window.pageYOffset
+      const parallaxLayers = document.querySelectorAll('.parallax-layer')
+      
+      parallaxLayers.forEach((layer, index) => {
+        const speed = (index + 1) * 0.5
+        layer.style.transform = `translateY(${scrolled * speed}px)`
+      })
+
+      // Parallax for hero section
+      const hero = heroRef.current
+      if (hero) {
+        hero.style.transform = `translateY(${scrolled * 0.3}px)`
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   // Handle analysis
   const handleAnalyze = async (e) => {
     e?.preventDefault()
@@ -144,6 +167,9 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* ============ ANIMATED BACKGROUND EFFECTS ============ */}
+      <BackgroundEffects />
+
       {/* ============ FIXED HEADER ============ */}
       <header className="header">
         <div className="header-logo">
@@ -335,17 +361,9 @@ export default function App() {
           />
         )}
 
-        {/* ============ STOCK PERFORMANCE ============ */}
-        {results && (
-          <StockPerformance ticker={results.ticker} companyName={companyName} />
-        )}
-
-        {/* ============ CONTACT US ============ */}
-        <ContactUs />
-
         {/* ============ EMPTY STATE ============ */}
         {!results && !loading && !error && (
-          <div className="empty-state" style={{ marginTop: '-50vh' }}>
+          <div className="empty-state">
             <svg className="empty-pentagon" viewBox="0 0 100 100">
               <polygon
                 points="50,5 95,35 80,90 20,90 5,35"
@@ -361,6 +379,28 @@ export default function App() {
             </p>
           </div>
         )}
+
+        {/* ============ STOCK PERFORMANCE ============ */}
+        <section id="stock" className="stock-section" style={{ position: 'relative', zIndex: 20 }}>
+          {results ? (
+            <StockPerformance ticker={results.ticker} companyName={companyName} />
+          ) : (
+            <>
+              <div className="stock-header">
+                <div className="stock-label">Market Data</div>
+                <h2 className="stock-title">Stock Performance</h2>
+              </div>
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 'var(--space-2xl)' }}>
+                Select a company and run analysis to view real-time stock performance.
+              </div>
+            </>
+          )}
+        </section>
+
+        {/* ============ CONTACT US ============ */}
+        <div style={{ position: 'relative', zIndex: 20 }}>
+          <ContactUs />
+        </div>
       </main>
     </div>
   )

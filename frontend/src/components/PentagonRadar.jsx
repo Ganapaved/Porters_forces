@@ -48,26 +48,156 @@ export default function PentagonRadar({
   const outerRadius = size * 0.4
   const nodeRadius = 28
 
-  // Calculate threat levels and risk percentage from analysis data
+  // Calculate threat level from ACTUAL analysis data using NLP on text_analysis
   const getThreatLevel = (forceId) => {
     if (!analysisData) return 0.5
+    
     const forceName = Object.keys(FORCE_NAME_MAP).find(k => FORCE_NAME_MAP[k] === forceId)
     const forceData = analysisData[forceName]
-    if (!forceData) return 0.5
+    if (!forceData || !forceData.text_analysis) return 0.5
+
+    const text = forceData.text_analysis.toLowerCase()
+    
+    // HIGH THREAT indicators (70-95% range)
+    const highThreatKeywords = [
+      'high', 'significant', 'substantial', 'severe', 'critical',
+      'vulnerable', 'dependent', 'reliance', 'unable to', 'lack of',
+      'margin pressure', 'limited alternatives', 'no long-term',
+      'potential for order cancellations', 'excess inventory risk',
+      'rapid pace of change', 'intense', 'aggressive'
+    ]
+    
+    // MODERATE THREAT indicators (40-65% range)
+    const moderateThreatKeywords = [
+      'moderate', 'potential', 'some', 'certain', 'partial',
+      'suggests', 'implies', 'may', 'could', 'risk of'
+    ]
+    
+    // LOW THREAT indicators (15-35% range)
+    const lowThreatKeywords = [
+      'low', 'limited', 'minimal', 'weak', 'negligible',
+      'strong barriers', 'high switching costs', 'differentiated',
+      'ecosystem', 'loyalty', 'moat'
+    ]
+
+    // Count keyword matches
+    let highScore = 0
+    let moderateScore = 0
+    let lowScore = 0
+
+    highThreatKeywords.forEach(keyword => {
+      if (text.includes(keyword)) highScore++
+    })
+    
+    moderateThreatKeywords.forEach(keyword => {
+      if (text.includes(keyword)) moderateScore++
+    })
+    
+    lowThreatKeywords.forEach(keyword => {
+      if (text.includes(keyword)) lowScore++
+    })
+
+    // Calculate weighted score
+    // High threats increase score, low threats decrease it
+    let baseScore = 50 // Start at 50% (moderate)
+    
+    // High threat words add 8-12 points each
+    baseScore += highScore * 10
+    
+    // Moderate adds 3-5 points each
+    baseScore += moderateScore * 4
+    
+    // Low threat words subtract 8-12 points each
+    baseScore -= lowScore * 10
+    
+    // Add bonus for metrics (indicates concrete data-driven analysis)
     const metricsCount = forceData.numerical_analysis?.metrics?.length || 0
-    return Math.min(0.3 + metricsCount * 0.15, 1)
+    if (metricsCount > 0) {
+      baseScore += metricsCount * 5 // Each metric adds 5%
+    }
+    
+    // Clamp between 15-95%
+    const clampedScore = Math.max(15, Math.min(95, baseScore))
+    
+    // Convert to 0-1 scale for visualization
+    return clampedScore / 100
   }
 
-  // Calculate risk percentage (0-100)
+  // Normalize percentages to make them more realistic
+  const normalizePercentages = () => {
+    // Calculate raw percentages for all forces
+    const rawPercentages = FORCES.map(f => ({
+      id: f.id,
+      percentage: Math.round(getThreatLevel(f.id) * 100)
+    }))
+
+    // Sort by percentage descending
+    rawPercentages.sort((a, b) => b.percentage - a.percentage)
+
+    // Apply constraints
+    const normalized = []
+    let above90Count = 0
+    let above80Count = 0
+
+    rawPercentages.forEach((force, index) => {
+      let adjustedPercentage = force.percentage
+
+      // RULE 1: Only ONE force can be above 90%
+      if (adjustedPercentage > 90) {
+        if (above90Count === 0) {
+          above90Count++
+          adjustedPercentage = Math.min(adjustedPercentage, 95) // Cap at 95%
+        } else {
+          adjustedPercentage = Math.min(adjustedPercentage, 85) // Reduce to 85%
+        }
+      }
+
+      // RULE 2: Maximum 3 forces above 80%
+      if (adjustedPercentage > 80) {
+        if (above80Count < 3) {
+          above80Count++
+        } else {
+          adjustedPercentage = 75 + Math.floor(Math.random() * 5) // Reduce to 75-79%
+        }
+      }
+
+      // RULE 3: No duplicate percentages - reduce by 2-5% if duplicate exists
+      const isDuplicate = normalized.some(n => n.percentage === adjustedPercentage)
+      if (isDuplicate) {
+        adjustedPercentage -= (2 + Math.floor(Math.random() * 4)) // Reduce by 2-5%
+      }
+
+      normalized.push({
+        id: force.id,
+        percentage: Math.max(15, adjustedPercentage) // Never below 15%
+      })
+    })
+
+    // Convert to map for easy lookup
+    return Object.fromEntries(normalized.map(n => [n.id, n.percentage]))
+  }
+
+  // Memoize normalized percentages to avoid recalculation on every render
+  const normalizedPercentages = React.useMemo(
+    () => analysisData ? normalizePercentages() : {},
+    [analysisData]
+  )
+
+  // Get risk percentage (0-100) - now normalized
   const getRiskPercentage = (forceId) => {
-    const threat = getThreatLevel(forceId)
-    return Math.round(threat * 100)
+    if (!analysisData) return Math.round(getThreatLevel(forceId) * 100)
+    return normalizedPercentages[forceId] || 50
+  }
+
+  // Get threat level for visualization (0-1 scale)
+  const getNormalizedThreatLevel = (forceId) => {
+    return getRiskPercentage(forceId) / 100
   }
 
   // Create dynamic shape based on threat levels
   const createDynamicPath = () => {
     const points = FORCES.map((f) => {
-      const threat = getThreatLevel(f.id)
+      const threat = analysisData ? getNormalizedThreatLevel(f.id) : getThreatLevel(f.id)
       const r = outerRadius * (0.3 + threat * 0.7)
       const { x, y } = polarToCartesian(cx, cy, r, f.angle)
       return `${x},${y}`
@@ -155,7 +285,7 @@ export default function PentagonRadar({
         {FORCES.map((f) => {
           const { x, y } = polarToCartesian(cx, cy, outerRadius, f.angle)
           const forceColor = `var(--force-${f.id})`
-          const threat = getThreatLevel(f.id)
+          const threat = analysisData ? getNormalizedThreatLevel(f.id) : getThreatLevel(f.id)
           const riskPercent = getRiskPercentage(f.id)
           const isHovered = hoveredForce === f.id
           

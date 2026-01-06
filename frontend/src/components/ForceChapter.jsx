@@ -47,23 +47,29 @@ function parseAnalysisText(textAnalysis) {
   return { explanation, keyNumbers, orgView, investorView }
 }
 
-function formatBulletPoints(text) {
+// Clean content: remove asterisks, bullet points, and markdown symbols
+function cleanContent(text) {
+  if (!text) return ''
+  return text
+    .replace(/^\s*[\*\-•]\s*/gm, '')  // Remove bullet points at start of lines
+    .replace(/\*\*/g, '')              // Remove bold markdown **
+    .replace(/\*/g, '')                // Remove remaining asterisks
+    .replace(/^#+\s*/gm, '')           // Remove markdown headers
+    .replace(/\n{2,}/g, ' ')           // Collapse multiple newlines into space
+    .replace(/\n/g, ' ')               // Replace single newlines with space
+    .replace(/\s{2,}/g, ' ')           // Collapse multiple spaces
+    .trim()
+}
+
+// Format text as clean prose paragraphs
+function formatProse(text) {
   if (!text) return null
   
-  // Split by bullet points or newlines
-  const lines = text.split(/[•\-\n]/).filter(l => l.trim())
+  const cleanedText = cleanContent(text)
   
-  if (lines.length <= 1) {
-    return <p>{text}</p>
-  }
+  if (!cleanedText) return null
   
-  return (
-    <ul>
-      {lines.map((line, i) => (
-        <li key={i}>{line.trim()}</li>
-      ))}
-    </ul>
-  )
+  return <p style={{ lineHeight: '1.7', margin: 0 }}>{cleanedText}</p>
 }
 
 export default function ForceChapter({ 
@@ -95,7 +101,7 @@ export default function ForceChapter({
         
         {/* Narrative */}
         <div className="chapter-narrative">
-          {explanation || 'Analysis in progress...'}
+          {cleanContent(explanation) || 'Analysis in progress...'}
         </div>
         
         {/* Perspectives */}
@@ -107,7 +113,7 @@ export default function ForceChapter({
                 <span className="perspective-title">Organization View</span>
               </div>
               <div className="perspective-content">
-                {formatBulletPoints(orgView)}
+                {formatProse(orgView)}
               </div>
             </div>
           )}
@@ -119,7 +125,7 @@ export default function ForceChapter({
                 <span className="perspective-title">Investor View</span>
               </div>
               <div className="perspective-content">
-                {formatBulletPoints(investorView)}
+                {formatProse(investorView)}
               </div>
             </div>
           )}
