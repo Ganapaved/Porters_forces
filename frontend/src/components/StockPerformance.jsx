@@ -1,286 +1,272 @@
-import React, { useState, useEffect, useRef } from 'react'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend,
-  Filler,
-} from 'chart.js'
-import { Line } from 'react-chartjs-2'
+import React, { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { TrendingUp, TrendingDown, Activity, DollarSign, BarChart3 } from 'lucide-react'
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend,
-  Filler
-)
-
-// Generate mock stock data for 10 years
-function generateMockStockData(ticker, years = 10) {
-  const data = []
-  const labels = []
-  const currentYear = new Date().getFullYear()
-  
-  // Base prices for known companies
-  const basePrices = {
-    AAPL: 25,
-    MSFT: 30,
-    GOOGL: 50,
-    AMZN: 80,
-    NVDA: 5,
-    TSLA: 20,
-    META: 30,
-  }
-  
-  let price = basePrices[ticker] || 50
-  const volatility = 0.15
-  const trend = 0.08 // 8% annual growth average
-  
-  for (let year = currentYear - years; year <= currentYear; year++) {
-    for (let month = 1; month <= 12; month++) {
-      if (year === currentYear && month > new Date().getMonth() + 1) break
-      
-      // Random walk with upward trend
-      const randomChange = (Math.random() - 0.5) * volatility
-      const trendChange = trend / 12
-      price = price * (1 + randomChange + trendChange)
-      price = Math.max(price, 1) // Ensure price doesn't go negative
-      
-      data.push(parseFloat(price.toFixed(2)))
-      labels.push(`${year}-${month.toString().padStart(2, '0')}`)
-    }
-  }
-  
-  return { data, labels }
-}
-
-// Calculate stock statistics
-function calculateStats(data) {
-  if (!data.length) return {}
-  
-  const current = data[data.length - 1]
-  const yearAgo = data[Math.max(0, data.length - 12)]
-  const fiveYearsAgo = data[Math.max(0, data.length - 60)]
-  const allTimeHigh = Math.max(...data)
-  const allTimeLow = Math.min(...data)
-  const yearChange = ((current - yearAgo) / yearAgo * 100).toFixed(2)
-  const fiveYearChange = ((current - fiveYearsAgo) / fiveYearsAgo * 100).toFixed(2)
-  
-  return {
-    current: current.toFixed(2),
-    yearChange,
-    fiveYearChange,
-    high: allTimeHigh.toFixed(2),
-    low: allTimeLow.toFixed(2),
-  }
-}
+const API_BASE = 'http://127.0.0.1:8000'
 
 export default function StockPerformance({ ticker, companyName }) {
-  const [period, setPeriod] = useState('10Y')
-  const [stockData, setStockData] = useState({ data: [], labels: [] })
-  const [stats, setStats] = useState({})
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (ticker) {
-      // Generate mock data (replace with API call later)
-      const mockData = generateMockStockData(ticker, 10)
-      setStockData(mockData)
-      setStats(calculateStats(mockData.data))
+    if (!ticker) {
+      setLoading(false)
+      return
     }
+
+    setLoading(true)
+    setError(null)
+
+    fetch(`${API_BASE}/stock?ticker=${ticker}`)
+      .then(res => res.json())
+      .then(result => {
+        if (result.error) {
+          setError(result.error)
+        } else {
+          setData(result)
+        }
+      })
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false))
   }, [ticker])
-
-  // Filter data based on selected period
-  const getFilteredData = () => {
-    const { data, labels } = stockData
-    if (!data.length) return { data: [], labels: [] }
-    
-    let months = data.length
-    switch (period) {
-      case '1Y': months = 12; break
-      case '3Y': months = 36; break
-      case '5Y': months = 60; break
-      case '10Y': months = data.length; break
-      default: months = data.length
-    }
-    
-    return {
-      data: data.slice(-months),
-      labels: labels.slice(-months)
-    }
-  }
-
-  const filteredData = getFilteredData()
-  const isPositive = parseFloat(stats.yearChange) >= 0
-
-  const chartData = {
-    labels: filteredData.labels,
-    datasets: [
-      {
-        label: `${ticker} Stock Price`,
-        data: filteredData.data,
-        borderColor: isPositive ? '#10b981' : '#f43f5e',
-        backgroundColor: isPositive 
-          ? 'rgba(16, 185, 129, 0.1)' 
-          : 'rgba(244, 63, 94, 0.1)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0.4,
-        pointRadius: 0,
-        pointHoverRadius: 6,
-        pointHoverBackgroundColor: isPositive ? '#10b981' : '#f43f5e',
-        pointHoverBorderColor: '#fff',
-        pointHoverBorderWidth: 2,
-      }
-    ]
-  }
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: {
-      intersect: false,
-      mode: 'index',
-    },
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        backgroundColor: 'rgba(17, 24, 39, 0.95)',
-        titleColor: '#f1f5f9',
-        bodyColor: '#94a3b8',
-        borderColor: 'rgba(255,255,255,0.1)',
-        borderWidth: 1,
-        padding: 12,
-        displayColors: false,
-        callbacks: {
-          title: (items) => {
-            if (items.length) {
-              const [year, month] = items[0].label.split('-')
-              const date = new Date(year, month - 1)
-              return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-            }
-            return ''
-          },
-          label: (item) => `$${item.raw.toFixed(2)}`
-        }
-      }
-    },
-    scales: {
-      x: {
-        display: true,
-        grid: {
-          display: false,
-        },
-        ticks: {
-          color: '#64748b',
-          font: { size: 10 },
-          maxTicksLimit: 8,
-          callback: function(value, index) {
-            const label = this.getLabelForValue(value)
-            if (label) {
-              const [year, month] = label.split('-')
-              if (month === '01' || month === '06') {
-                return year
-              }
-            }
-            return ''
-          }
-        }
-      },
-      y: {
-        display: true,
-        position: 'right',
-        grid: {
-          color: 'rgba(255,255,255,0.05)',
-        },
-        ticks: {
-          color: '#64748b',
-          font: { size: 10 },
-          callback: (value) => `$${value}`
-        }
-      }
-    },
-    animation: {
-      duration: 1000,
-      easing: 'easeOutQuart'
-    }
-  }
 
   if (!ticker) {
     return (
-      <section className="stock-performance" id="stock-performance">
-        <div className="stock-performance-inner">
-          <div className="stock-header">
-            <div className="stock-label">Market Performance</div>
-            <h2 className="stock-title">Stock Performance</h2>
-          </div>
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 'var(--space-2xl)' }}>
-            Select a company to view its stock performance chart.
-          </div>
+      <section className="stock-section" id="stock">
+        <div className="stock-header">
+          <div className="stock-label">Market Data</div>
+          <h2 className="stock-title">Stock Performance</h2>
+        </div>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 'var(--space-2xl)' }}>
+          Select a company to view real-time stock performance.
         </div>
       </section>
     )
   }
 
-  return (
-    <section className="stock-performance" id="stock-performance">
-      <div className="stock-performance-inner">
+  if (loading) {
+    return (
+      <section className="stock-section" id="stock">
         <div className="stock-header">
-          <div className="stock-label">Market Performance</div>
-          <h2 className="stock-title">{companyName || ticker} Stock</h2>
+          <div className="stock-label">Market Data</div>
+          <h2 className="stock-title">Stock Performance</h2>
         </div>
+        <div className="stock-loading">
+          <Activity className="loading-icon" size={24} />
+          <span>Loading real-time data for {ticker}...</span>
+        </div>
+      </section>
+    )
+  }
 
-        <div className="stock-chart-container">
-          <div className="stock-chart-header">
-            <div className="stock-price-info">
-              <span className="stock-current-price">${stats.current}</span>
-              <span className={`stock-change ${isPositive ? 'positive' : 'negative'}`}>
-                {isPositive ? '↑' : '↓'} {Math.abs(stats.yearChange)}% (1Y)
-              </span>
+  if (error || !data) {
+    return (
+      <section className="stock-section" id="stock">
+        <div className="stock-header">
+          <div className="stock-label">Market Data</div>
+          <h2 className="stock-title">Stock Performance</h2>
+        </div>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 'var(--space-2xl)' }}>
+          Unable to load stock data. {error}
+        </div>
+      </section>
+    )
+  }
+
+  const isPositive = data.change >= 0
+  const prices = data.history.map(h => h.price)
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+
+  // SVG Sparkline Logic
+  const width = 600
+  const height = 120
+  const padding = 10
+
+  const points = data.history.map((h, i) => {
+    const x = padding + (i / (data.history.length - 1)) * (width - padding * 2)
+    const y = padding + (height - padding * 2) - ((h.price - min) / (max - min || 1)) * (height - padding * 2)
+    return `${x},${y}`
+  }).join(' ')
+
+  // Gradient fill path
+  const areaPath = `M ${padding},${height - padding} ` +
+    data.history.map((h, i) => {
+      const x = padding + (i / (data.history.length - 1)) * (width - padding * 2)
+      const y = padding + (height - padding * 2) - ((h.price - min) / (max - min || 1)) * (height - padding * 2)
+      return `L ${x},${y}`
+    }).join(' ') +
+    ` L ${width - padding},${height - padding} Z`
+
+  const formatMarketCap = (value) => {
+    if (!value) return 'N/A'
+    if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`
+    if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`
+    if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`
+    return `$${value.toLocaleString()}`
+  }
+
+  const formatVolume = (value) => {
+    if (!value) return 'N/A'
+    if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`
+    if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`
+    if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`
+    return value.toLocaleString()
+  }
+
+  return (
+    <section className="stock-section" id="stock">
+      <div className="stock-header">
+        <div className="stock-label">Real-Time Market Data</div>
+        <h2 className="stock-title">{companyName || ticker} Stock Performance</h2>
+      </div>
+
+      <div className="stock-content">
+        {/* Main Price Card */}
+        <motion.div 
+          className="stock-price-card"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="price-header">
+            <div className="price-info">
+              <span className="ticker-badge">{data.ticker}</span>
+              <div className="current-price">
+                <DollarSign size={28} className="price-icon" />
+                <span className="price-value">{data.current_price}</span>
+              </div>
+              <div className={`price-change ${isPositive ? 'positive' : 'negative'}`}>
+                {isPositive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                <span>{isPositive ? '+' : ''}{data.change} ({data.change_percent}%)</span>
+              </div>
             </div>
-            
-            <div className="stock-period-tabs">
-              {['1Y', '3Y', '5Y', '10Y'].map((p) => (
-                <button
-                  key={p}
-                  className={`period-tab ${period === p ? 'active' : ''}`}
-                  onClick={() => setPeriod(p)}
-                >
-                  {p}
-                </button>
-              ))}
+            <div className={`trend-indicator ${isPositive ? 'positive' : 'negative'}`}>
+              {isPositive ? <TrendingUp size={32} /> : <TrendingDown size={32} />}
             </div>
           </div>
 
-          <div className="stock-chart">
-            <Line data={chartData} options={chartOptions} />
-          </div>
+          {/* Animated SVG Chart */}
+          <div className="chart-container">
+            <svg viewBox={`0 0 ${width} ${height}`} className="stock-chart">
+              <defs>
+                <linearGradient id={`gradient-${ticker}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor={isPositive ? '#4ade80' : '#f87171'} stopOpacity="0.3" />
+                  <stop offset="100%" stopColor={isPositive ? '#4ade80' : '#f87171'} stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              
+              {/* Area fill */}
+              <motion.path
+                d={areaPath}
+                fill={`url(#gradient-${ticker})`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 1, delay: 0.5 }}
+              />
 
-          <div className="stock-stats">
-            <div className="stock-stat-card">
-              <div className="stock-stat-value">${stats.high}</div>
-              <div className="stock-stat-label">All-Time High</div>
-            </div>
-            <div className="stock-stat-card">
-              <div className="stock-stat-value">${stats.low}</div>
-              <div className="stock-stat-label">All-Time Low</div>
-            </div>
-            <div className="stock-stat-card">
-              <div className="stock-stat-value">{stats.yearChange}%</div>
-              <div className="stock-stat-label">1 Year Return</div>
-            </div>
-            <div className="stock-stat-card">
-              <div className="stock-stat-value">{stats.fiveYearChange}%</div>
-              <div className="stock-stat-label">5 Year Return</div>
+              {/* Line */}
+              <motion.polyline
+                fill="none"
+                stroke={isPositive ? '#4ade80' : '#f87171'}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                points={points}
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 1 }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+              />
+
+              {/* Current price dot */}
+              <motion.circle
+                cx={width - padding}
+                cy={padding + (height - padding * 2) - ((prices[prices.length - 1] - min) / (max - min || 1)) * (height - padding * 2)}
+                r="6"
+                fill={isPositive ? '#4ade80' : '#f87171'}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.3, delay: 1.5 }}
+              />
+            </svg>
+
+            <div className="chart-labels">
+              <span className="chart-label-low">30D Low: ${min.toFixed(2)}</span>
+              <span className="chart-label-period">Last 30 Days</span>
+              <span className="chart-label-high">30D High: ${max.toFixed(2)}</span>
             </div>
           </div>
+        </motion.div>
+
+        {/* Stats Grid */}
+        <div className="stock-stats-grid">
+          <motion.div 
+            className="stock-stat-card"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <BarChart3 size={20} className="stat-icon" />
+            <div className="stat-content">
+              <span className="stat-value">{formatMarketCap(data.summary?.market_cap)}</span>
+              <span className="stat-label">Market Cap</span>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            className="stock-stat-card"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <Activity size={20} className="stat-icon" />
+            <div className="stat-content">
+              <span className="stat-value">{formatVolume(data.summary?.volume)}</span>
+              <span className="stat-label">Volume</span>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            className="stock-stat-card"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <TrendingUp size={20} className="stat-icon" />
+            <div className="stat-content">
+              <span className="stat-value">${data.summary?.high_52w?.toFixed(2) || 'N/A'}</span>
+              <span className="stat-label">52W High</span>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            className="stock-stat-card"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+          >
+            <TrendingDown size={20} className="stat-icon" />
+            <div className="stat-content">
+              <span className="stat-value">${data.summary?.low_52w?.toFixed(2) || 'N/A'}</span>
+              <span className="stat-label">52W Low</span>
+            </div>
+          </motion.div>
+
+          {data.summary?.pe_ratio && (
+            <motion.div 
+              className="stock-stat-card"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.6 }}
+            >
+              <DollarSign size={20} className="stat-icon" />
+              <div className="stat-content">
+                <span className="stat-value">{data.summary.pe_ratio.toFixed(2)}</span>
+                <span className="stat-label">P/E Ratio</span>
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
     </section>

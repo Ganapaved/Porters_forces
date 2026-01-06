@@ -12,3 +12,4 @@ matplotlib
 plotly
 requests
 pydantic
+yfinance

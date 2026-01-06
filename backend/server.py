@@ -133,3 +133,54 @@ def get_company_info(
             
     except Exception as e:
         return {"error": str(e)}
+
+
+@app.get("/stock")
+def get_stock_data(ticker: str = Query(..., description="Ticker symbol (e.g., AAPL)")):
+    """
+    Fetch real-time stock data using yfinance
+    Returns 30-day price history and key metrics
+    """
+    import yfinance as yf
+    
+    ticker = ticker.upper()
+    try:
+        stock = yf.Ticker(ticker)
+        # Fetch 1 month of history for the sparkline
+        history = stock.history(period="1mo")
+        
+        if history.empty:
+            return {"error": "No data found for ticker"}
+        
+        # Format for frontend charting
+        chart_data = [
+            {
+                "date": date.strftime("%Y-%m-%d"),
+                "price": float(row["Close"]),
+            }
+            for date, row in history.iterrows()
+        ]
+        
+        # Key Metrics
+        info = stock.info
+        latest_price = chart_data[-1]["price"]
+        prev_price = chart_data[-2]["price"] if len(chart_data) > 1 else latest_price
+        change = latest_price - prev_price
+        change_percent = (change / prev_price) * 100 if prev_price != 0 else 0
+        
+        return {
+            "ticker": ticker,
+            "current_price": round(latest_price, 2),
+            "change": round(change, 2),
+            "change_percent": round(change_percent, 2),
+            "history": chart_data,
+            "summary": {
+                "high_52w": info.get("fiftyTwoWeekHigh"),
+                "low_52w": info.get("fiftyTwoWeekLow"),
+                "volume": info.get("volume"),
+                "market_cap": info.get("marketCap"),
+                "pe_ratio": info.get("trailingPE"),
+            }
+        }
+    except Exception as e:
+        return {"error": str(e)}

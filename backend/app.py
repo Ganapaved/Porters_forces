@@ -49,20 +49,34 @@ def generate_with_fallback(prompt: str):
     raise last_error if last_error else RuntimeError("No Gemini model succeeded")
 
 # -------------------------------
-# 5. LOCAL EMBEDDINGS
+# 5. LOCAL EMBEDDINGS (Lazy Loading)
 # -------------------------------
 class LocalSentenceEmbedding(Embeddings):
-    def __init__(self,model_name = 'all-MiniLM-L6-v2'):
-        print("[INFO] Loading local embedding model...")
-        self.model = SentenceTransformer(model_name)
+    def __init__(self, model_name='all-MiniLM-L6-v2'):
+        self.model_name = model_name
+        self._model = None
+    
+    @property
+    def model(self):
+        if self._model is None:
+            print("[INFO] Loading local embedding model...")
+            self._model = SentenceTransformer(self.model_name)
+        return self._model
     
     def embed_documents(self, texts):
-        return self.model.encode(texts,show_progress_bar=True).tolist()
+        return self.model.encode(texts, show_progress_bar=True).tolist()
     
     def embed_query(self, text):
         return self.model.encode([text])[0].tolist()
 
-embedding = LocalSentenceEmbedding()
+# Lazy initialization - model loads only when needed
+embedding = None
+
+def get_embedding():
+    global embedding
+    if embedding is None:
+        embedding = LocalSentenceEmbedding()
+    return embedding
 
 VECTOR_DIR = "./chroma_store"
 # -------------------------------
@@ -120,13 +134,13 @@ def analyze_force(ticker):
         print("[INFO] Existing Chroma vector DB found. Loading...")
         vector_db = Chroma(
             persist_directory=VECTOR_DIR,
-            embedding_function=embedding
+            embedding_function=get_embedding()
         )
     else:
         print("[INFO] No vector DB found. Creating embeddings and storing...")
         vector_db = Chroma.from_texts(
             texts=chunks,
-            embedding=embedding,
+            embedding=get_embedding(),
             persist_directory=VECTOR_DIR
         )
         vector_db.persist()
